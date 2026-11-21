@@ -161,7 +161,7 @@ export default function Navigation() {
         )}
       </nav>
 
-      {isSignedIn && !me.loading && !me.profile && !location.pathname.startsWith('/profile') && (
+      {isSignedIn && !me.loading && !me.profile && !location.pathname.startsWith('/profile') && !location.pathname.startsWith('/onboarding') && (
         <div className="border-b border-primary/30 bg-primary/10 px-4 py-2 text-center text-sm text-foreground" data-testid="setup-banner">
           One step left: tell us whether you fly or hire.{' '}
           <Link to="/profile" className="font-semibold text-primary hover:underline">Set up your account →</Link>

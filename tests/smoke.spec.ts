@@ -68,4 +68,12 @@ test.describe('Smoke tests', () => {
     await waitForApp(page)
     await expect(page.locator('text=404')).toBeVisible()
   })
+
+  test('every app route the UI links to resolves (no 404)', async ({ page }) => {
+    for (const path of ['/home', '/profile', '/onboarding', '/dashboard', '/post', '/documents']) {
+      await page.goto(path)
+      await expect(page.getByTestId('app-navigation')).toBeVisible({ timeout: 15000 })
+      await expect(page.locator('text=404'), `${path} rendered the 404 page`).toHaveCount(0)
+    }
+  })
 })

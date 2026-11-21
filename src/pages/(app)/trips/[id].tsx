@@ -135,7 +135,7 @@ function ApplyPanel({ trip }: { trip: { recordId: string; data: Trip } }) {
       <Panel className="p-5">
         <h2 className="text-sm font-semibold">Finish your profile first</h2>
         <p className="mt-1 text-sm text-muted-foreground">Tell us whether you fly or hire, then come back to apply.</p>
-        <Link to="/onboarding" className="mt-4 inline-flex text-sm text-primary hover:underline">Set up profile →</Link>
+        <Link to="/profile" className="mt-4 inline-flex text-sm text-primary hover:underline">Set up profile →</Link>
       </Panel>
     )
   }
