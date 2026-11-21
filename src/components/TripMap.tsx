@@ -19,7 +19,12 @@ function loadLand(): Promise<LandGeo> {
   ]).then(([topo, data]) => {
     const world = (data as { default?: unknown }).default ?? data
     const t = world as Parameters<typeof topo.feature>[0] & { objects: { countries: Parameters<typeof topo.feature>[1] } }
-    return unwrapAntimeridian(topo.feature(t, t.objects.countries) as LandGeo)
+    const geo = topo.feature(t, t.objects.countries) as LandGeo
+    // Antarctica can't be drawn in Web Mercator (the pole is at infinity) and
+    // its outline wraps the whole globe, so it renders as a broken slab. No
+    // business-aviation route goes there; leave it out.
+    if (geo.type === 'FeatureCollection') geo.features = geo.features.filter((f) => String(f.id) !== '010')
+    return unwrapAntimeridian(geo)
   })
   return landPromise
 }
@@ -165,6 +170,10 @@ export function TripMap({
       zoom: 3,
       minZoom: 2,
       worldCopyJump: true,
+      // Keep panning between the Southern Ocean and the Arctic; east-west
+      // stays open across the world copies.
+      maxBounds: L.latLngBounds([-60, -540], [84, 540]),
+      maxBoundsViscosity: 1,
       zoomControl: true,
       attributionControl: true,
     })
