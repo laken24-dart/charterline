@@ -43,17 +43,34 @@ export function useMyProfile() {
 
 /** Open a certificate through the permission-checked worker route. */
 export async function openDocument(documentId: string): Promise<string | null> {
-  const token = await getAuthToken()
-  if (!token) return 'Please sign in first.'
-  const res = await fetch(`/api/documents/${encodeURIComponent(documentId)}/file`, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-  if (!res.ok) return res.status === 404 ? 'You do not have access to this document.' : `Could not open (${res.status})`
-  const blob = await res.blob()
-  const url = URL.createObjectURL(blob)
-  window.open(url, '_blank', 'noopener')
-  setTimeout(() => URL.revokeObjectURL(url), 60_000)
-  return null
+  // Open the tab synchronously, inside the click, so popup blockers allow it;
+  // fill it once the permission-checked fetch returns.
+  const win = window.open('', '_blank')
+  const fail = (msg: string) => {
+    win?.close()
+    return msg
+  }
+  try {
+    const token = await getAuthToken()
+    if (!token) return fail('Please sign in first.')
+    const res = await fetch(`/api/documents/${encodeURIComponent(documentId)}/file`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!res.ok) {
+      return fail(res.status === 404 ? 'You do not have access to this document.' : `Could not open (${res.status})`)
+    }
+    const url = URL.createObjectURL(await res.blob())
+    if (win) {
+      win.opener = null
+      win.location.href = url
+    } else {
+      window.location.assign(url)
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 120_000)
+    return null
+  } catch (err) {
+    return fail(err instanceof Error ? err.message : 'Could not open document')
+  }
 }
 
 export const usd = (n: number | undefined) =>

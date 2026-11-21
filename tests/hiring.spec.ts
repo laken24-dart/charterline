@@ -96,9 +96,26 @@ test('operator ↔ pilot hiring loop with private documents', async ({ users }) 
   await op.goto(appUrl)
   await expect(op.getByText('Current on the G-IV, available all week.')).toBeVisible({ timeout: 15_000 })
   await expect(op.getByText(/Interview booked for/)).toBeVisible()
+  // The file route serves the pilot and the hiring operator…
+  const statusAs = (page: Page) =>
+    page.evaluate(async (id) => {
+      const get = (window as unknown as { __getAuthToken: () => Promise<string | null> }).__getAuthToken
+      const res = await fetch(`/api/documents/${id}/file`, { headers: { Authorization: `Bearer ${await get()}` } })
+      return res.status
+    }, docId)
+  expect(await statusAs(op)).toBe(200)
+  expect(await statusAs(pp)).toBe(200)
   const popup = op.waitForEvent('popup')
   await op.getByTestId('open-document').first().click()
-  await expect((await popup).url()).toMatch(/^blob:/)
+  const viewer = await popup
+  // Headed browsers render the PDF at a blob: URL; headless Chromium has no
+  // PDF viewer and turns the same navigation into a download.
+  const outcome = await Promise.race([
+    viewer.waitForEvent('download', { timeout: 10_000 }).then((d) => `download:${d.url()}`),
+    expect.poll(() => viewer.url(), { timeout: 10_000 }).toMatch(/^blob:/).then(() => `page:${viewer.url()}`),
+  ])
+  expect(outcome).toMatch(/^(download|page):blob:/)
+  await viewer.close().catch(() => {})
 
   // The outsider can see neither the application nor the certificate.
   const xp = outsider.page
@@ -106,14 +123,6 @@ test('operator ↔ pilot hiring loop with private documents', async ({ users }) 
   await expect(xp.getByText('Application not found')).toBeVisible({ timeout: 15_000 })
   await xp.goto(`/trips/${tripId}`)
   await expect(xp.getByText('Applicants')).toHaveCount(0)
-  // With the outsider's own valid token, the file route still refuses.
-  const statusAs = (page: Page) =>
-    page.evaluate(async (id) => {
-      const get = (window as unknown as { __getAuthToken: () => Promise<string | null> }).__getAuthToken
-      const res = await fetch(`/api/documents/${id}/file`, { headers: { Authorization: `Bearer ${await get()}` } })
-      return res.status
-    }, docId)
+  // …and refuses the outsider even with a valid session token.
   expect(await statusAs(xp)).toBe(404)
-  expect(await statusAs(op)).toBe(200)
-  expect(await statusAs(pp)).toBe(200)
 })

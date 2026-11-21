@@ -105,7 +105,11 @@ function Thread({ applicationId, myId, note, pilotName }: { applicationId: strin
   const [sending, setSending] = useState(false)
   const end = useRef<HTMLDivElement>(null)
   const messages = useMemo(() => [...records].sort((a, b) => a.createdAt.localeCompare(b.createdAt)), [records])
-  useEffect(() => end.current?.scrollIntoView({ block: 'end' }), [messages.length])
+  useEffect(() => {
+    // Braces matter: newer browsers return a Promise from scrollIntoView, and
+    // an effect must return nothing or a cleanup function.
+    end.current?.scrollIntoView({ block: 'end' })
+  }, [messages.length])
 
   async function send() {
     const text = body.trim()
