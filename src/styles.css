@@ -239,7 +239,7 @@ body { -webkit-font-smoothing: antialiased; font-feature-settings: "cv11", "ss01
 .tabular { font-variant-numeric: tabular-nums; }
 
 /* Leaflet on the light palette; the basemap is our own vector land layer. */
-.leaflet-container { background: #d4e2f6; font: inherit; }
+.leaflet-container.leaflet-container { background: #d4e2f6; font: inherit; }
 .leaflet-tooltip { background: #ffffff; color: #0b1220; border: 1px solid #e2e7ef; border-radius: 8px; box-shadow: 0 8px 24px -8px rgba(15, 23, 42, 0.25); padding: 8px 10px; }
 .leaflet-control-attribution { background: rgba(255, 255, 255, 0.8) !important; color: #5b6577 !important; }
 .leaflet-control-attribution a { color: #1d4ed8 !important; }

@@ -19,9 +19,29 @@ function loadLand(): Promise<LandGeo> {
   ]).then(([topo, data]) => {
     const world = (data as { default?: unknown }).default ?? data
     const t = world as Parameters<typeof topo.feature>[0] & { objects: { countries: Parameters<typeof topo.feature>[1] } }
-    return topo.feature(t, t.objects.countries) as LandGeo
+    return unwrapAntimeridian(topo.feature(t, t.objects.countries) as LandGeo)
   })
   return landPromise
+}
+
+/**
+ * Rings that cross ±180° (eastern Russia, Fiji) jump from 180 to -180 and
+ * draw a band across the whole map. Shift their western points east so each
+ * ring is continuous; the -360/+360 world copies cover the other side.
+ */
+function unwrapAntimeridian(geo: LandGeo): LandGeo {
+  const fixRing = (ring: number[][]) => {
+    const lngs = ring.map((c) => c[0])
+    if (Math.max(...lngs) - Math.min(...lngs) <= 180) return ring
+    return ring.map(([lng, lat]) => [lng < 0 ? lng + 360 : lng, lat])
+  }
+  const features = geo.type === 'FeatureCollection' ? geo.features : [geo]
+  for (const f of features) {
+    const g = f.geometry
+    if (g?.type === 'Polygon') g.coordinates = g.coordinates.map(fixRing)
+    else if (g?.type === 'MultiPolygon') g.coordinates = g.coordinates.map((poly) => poly.map(fixRing))
+  }
+  return geo
 }
 
 export interface MapTrip {
