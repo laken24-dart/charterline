@@ -113,6 +113,26 @@ function flightArc(a: [number, number], b: [number, number]): [number, number][]
   })
 }
 
+/**
+ * Leaflet rounds every projected vertex to a whole pixel
+ * (Map.latLngToLayerPoint), which turns a finely sampled curve into a
+ * stair-step when zoomed in. This polyline keeps sub-pixel positions; the SVG
+ * renderer accepts fractional coordinates and anti-aliases them smoothly.
+ */
+type ProjectCtx = { _map: L.Map }
+const SmoothPolyline = L.Polyline.extend({
+  _projectLatlngs(this: ProjectCtx & { _projectLatlngs: (...a: unknown[]) => void }, latlngs: unknown[], result: L.Point[][], bounds: L.Bounds) {
+    if (latlngs[0] instanceof L.LatLng) {
+      const origin = this._map.getPixelOrigin()
+      const ring = (latlngs as L.LatLng[]).map((ll) => this._map.project(ll).subtract(origin))
+      ring.forEach((pt) => bounds.extend(pt))
+      result.push(ring)
+    } else {
+      for (const part of latlngs) this._projectLatlngs(part, result, bounds)
+    }
+  },
+}) as unknown as new (latlngs: L.LatLngExpression[], options?: L.PolylineOptions) => L.Polyline
+
 function escapeHtml(s: string) {
   return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
 }
@@ -196,9 +216,9 @@ export function TripMap({
       const smooth = { smoothFactor: 0, lineCap: 'round' as const, lineJoin: 'round' as const }
       if (selected) {
         // Soft white halo under the selected route lifts it off the map.
-        L.polyline(path, { ...smooth, color: '#ffffff', weight: 8, opacity: 0.9, interactive: false }).addTo(g)
+        new SmoothPolyline(path, { ...smooth, color: '#ffffff', weight: 8, opacity: 0.9, interactive: false }).addTo(g)
       }
-      const line = L.polyline(path, {
+      const line = new SmoothPolyline(path, {
         ...smooth,
         color: selected ? '#1d4ed8' : '#4f7fe8',
         weight: selected ? 3.2 : 2,
@@ -206,7 +226,7 @@ export function TripMap({
         dashArray: d.status === 'open' ? undefined : '4 6',
       })
       // Wide invisible hit target so thin routes are easy to click.
-      const hit = L.polyline(path, { ...smooth, color: '#000', opacity: 0, weight: 16 })
+      const hit = new SmoothPolyline(path, { ...smooth, color: '#000', opacity: 0, weight: 16 })
       const popup = `<div style="min-width:180px">
           <div style="font-weight:600;margin-bottom:2px">${escapeHtml(d.title)}</div>
           <div class="font-code" style="font-size:12px;opacity:.8">${escapeHtml(d.origin)} → ${escapeHtml(d.destination)}</div>
