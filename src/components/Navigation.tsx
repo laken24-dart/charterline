@@ -13,6 +13,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { AuthOverlay, useAuthProfileReady, signOut } from 'deepspace'
 import { ChevronDown, LogOut, Menu, X } from 'lucide-react'
 import { APP_NAME } from '../constants'
+import { Logo } from './Logo'
 import { nav } from '../nav'
 import { useMyProfile } from '../lib/client'
 import { cn } from '../lib/utils'
@@ -59,8 +60,8 @@ export default function Navigation() {
         to={item.path}
         aria-current={active ? 'page' : undefined}
         className={cn(
-          'px-3 py-1.5 text-sm',
-          active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
+          'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+          active ? 'bg-accent text-primary' : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
         )}
       >
         {item.label}
@@ -70,11 +71,10 @@ export default function Navigation() {
 
   return (
     <>
-      <nav data-testid="app-navigation" className="border-b border-border bg-background">
-        <div className="mx-auto flex h-12 max-w-7xl items-center gap-4 px-4">
-          <Link to="/home" className="flex items-center gap-2 text-sm font-semibold tracking-tight text-foreground">
-            <span aria-hidden className="font-code flex h-6 w-6 items-center justify-center rounded bg-primary text-[11px] font-bold text-primary-foreground">CL</span>
-            {APP_NAME}
+      <nav data-testid="app-navigation" className="border-b border-border bg-white">
+        <div className="mx-auto flex h-14 max-w-7xl items-center gap-6 px-4">
+          <Link to="/" aria-label={APP_NAME}>
+            <Logo />
           </Link>
 
           <div className="hidden items-center md:flex">{visibleNav.map(navLink)}</div>
@@ -138,7 +138,7 @@ export default function Navigation() {
             <button
               data-testid="nav-sign-in-button"
               onClick={() => setShowAuthModal(true)}
-              className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90"
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-[#1e40af]"
             >
               Sign in
             </button>

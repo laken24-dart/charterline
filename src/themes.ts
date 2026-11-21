@@ -18,9 +18,9 @@
 
 export const THEMES = [
   {
-    id: 'flightdeck',
-    label: 'Flight deck',
-    description: 'Charterline night-cockpit navy with an avionics amber accent.',
+    id: 'skyline',
+    label: 'Skyline',
+    description: 'Charterline: white and cool grays with near-black type and aviation blue.',
   },
   {
     id: 'slate',

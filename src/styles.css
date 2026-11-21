@@ -234,17 +234,29 @@
 }
 
 /* ── Charterline additions ─────────────────────────────────────────────── */
-
+body { -webkit-font-smoothing: antialiased; font-feature-settings: "cv11", "ss01"; }
 .font-code { font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace; letter-spacing: 0.02em; }
 .tabular { font-variant-numeric: tabular-nums; }
 
-/* Leaflet sits on our dark palette. */
-.leaflet-container { background: #070b14; font: inherit; }
-.leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--color-popover); color: var(--color-popover-foreground); border: 1px solid var(--color-border); }
-.leaflet-popup-content { margin: 10px 12px; }
-.leaflet-control-attribution { background: rgba(7, 11, 20, 0.7) !important; color: #6b7890 !important; }
-.leaflet-control-attribution a { color: #8b98ae !important; }
-.leaflet-bar a { background: var(--color-card); color: var(--color-foreground); border-color: var(--color-border); }
-.leaflet-bar a:hover { background: var(--color-accent); }
-.airport-dot { width: 10px; height: 10px; border-radius: 9999px; background: #f5b83d; box-shadow: 0 0 0 3px rgba(245, 184, 61, 0.25); }
-.airport-dot.dest { background: #e6ebf2; box-shadow: 0 0 0 3px rgba(230, 235, 242, 0.2); }
+/* Leaflet on the light palette; the basemap is our own vector land layer. */
+.leaflet-container { background: #d4e2f6; font: inherit; }
+.leaflet-tooltip { background: #ffffff; color: #0b1220; border: 1px solid #e2e7ef; border-radius: 8px; box-shadow: 0 8px 24px -8px rgba(15, 23, 42, 0.25); padding: 8px 10px; }
+.leaflet-control-attribution { background: rgba(255, 255, 255, 0.8) !important; color: #5b6577 !important; }
+.leaflet-control-attribution a { color: #1d4ed8 !important; }
+.leaflet-bar { border: 1px solid #e2e7ef !important; box-shadow: 0 2px 8px -2px rgba(15, 23, 42, 0.12) !important; border-radius: 8px !important; overflow: hidden; }
+.leaflet-bar a { background: #ffffff; color: #0b1220; border-color: #e2e7ef; }
+.leaflet-bar a:hover { background: #eef3fc; }
+.airport-dot { width: 10px; height: 10px; border-radius: 9999px; background: #1d4ed8; border: 2px solid #ffffff; box-shadow: 0 0 0 1px rgba(29, 78, 216, 0.4), 0 1px 3px rgba(15, 23, 42, 0.3); }
+.airport-dot.dest { background: #0b1220; box-shadow: 0 0 0 1px rgba(11, 18, 32, 0.4), 0 1px 3px rgba(15, 23, 42, 0.3); }
+
+/* Landing hero motion — pure CSS/SMIL so it prerenders. */
+@keyframes route-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+.route-draw { stroke-dasharray: 1; stroke-dashoffset: 1; animation: route-draw 1.6s cubic-bezier(.65,0,.35,1) forwards; }
+@keyframes float-y { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.float-slow { animation: float-y 6s ease-in-out infinite; }
+@keyframes rise-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.rise-in { animation: rise-in .7s ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .route-draw { animation: none; stroke-dashoffset: 0; }
+  .float-slow, .rise-in { animation: none; }
+}

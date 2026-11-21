@@ -212,7 +212,7 @@ function ApplyPanel({ trip }: { trip: { recordId: string; data: Trip } }) {
                   <label className="flex cursor-pointer items-center gap-2.5 rounded-md border border-border px-3 py-2 text-sm hover:bg-accent/40">
                     <input
                       type="checkbox"
-                      className="accent-[#f5b83d]"
+                      className="accent-[#1d4ed8]"
                       checked={picked.has(doc.recordId)}
                       onChange={(e) => {
                         const next = new Set(picked)

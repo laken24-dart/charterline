@@ -45,32 +45,32 @@
   --color-shell-panel: #ffffff;
 }
 
-/* Flight deck — Charterline's theme: night-cockpit navy with an avionics
- * amber accent. Deliberately not a generic indigo SaaS palette. */
-[data-theme="flightdeck"] {
-  color-scheme: dark;
-  --color-background: #070b14;
-  --color-foreground: #e6ebf2;
-  --color-card: #0e1524;
-  --color-card-foreground: #e6ebf2;
-  --color-popover: #111a2c;
-  --color-popover-foreground: #e6ebf2;
-  --color-primary: #f5b83d;
-  --color-primary-foreground: #1a1204;
-  --color-secondary: #16203a;
-  --color-secondary-foreground: #e6ebf2;
-  --color-muted: #131c30;
-  --color-muted-foreground: #8b98ae;
-  --color-accent: #1b2742;
-  --color-accent-foreground: #f2f5fa;
-  --color-destructive: #ef5b5b;
+/* Skyline — Charterline's theme: white surfaces, cool grays, near-black
+ * type and a single aviation blue for action and routes. */
+[data-theme="skyline"] {
+  color-scheme: light;
+  --color-background: #f6f8fb;
+  --color-foreground: #0b1220;
+  --color-card: #ffffff;
+  --color-card-foreground: #0b1220;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #0b1220;
+  --color-primary: #1d4ed8;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #eef2f7;
+  --color-secondary-foreground: #0b1220;
+  --color-muted: #eef2f7;
+  --color-muted-foreground: #5b6577;
+  --color-accent: #eef3fc;
+  --color-accent-foreground: #0b1220;
+  --color-destructive: #dc2626;
   --color-destructive-foreground: #ffffff;
-  --color-border: #1f2a42;
-  --color-input: #26324d;
-  --color-ring: #f5b83d;
-  --radius: 0.375rem;
-  --shadow-card: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-  --shadow-card-hover: 0 4px 14px 0 rgba(0, 0, 0, 0.4);
-  --color-shell: #070b14;
-  --color-shell-panel: #0e1524;
+  --color-border: #e2e7ef;
+  --color-input: #d6dde8;
+  --color-ring: #2563eb;
+  --radius: 0.625rem;
+  --shadow-card: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+  --shadow-card-hover: 0 6px 20px -6px rgba(15, 23, 42, 0.15);
+  --color-shell: #f6f8fb;
+  --color-shell-panel: #ffffff;
 }

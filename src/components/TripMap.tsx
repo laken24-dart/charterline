@@ -10,6 +10,20 @@ import 'leaflet/dist/leaflet.css'
 import type { Trip } from '../schemas/aviation-schemas'
 import { usd } from '../lib/client'
 
+type LandGeo = GeoJSON.FeatureCollection | GeoJSON.Feature
+let landPromise: Promise<LandGeo> | null = null
+function loadLand(): Promise<LandGeo> {
+  landPromise ??= Promise.all([
+    import('topojson-client'),
+    import('world-atlas/countries-50m.json'),
+  ]).then(([topo, data]) => {
+    const world = (data as { default?: unknown }).default ?? data
+    const t = world as Parameters<typeof topo.feature>[0] & { objects: { countries: Parameters<typeof topo.feature>[1] } }
+    return topo.feature(t, t.objects.countries) as LandGeo
+  })
+  return landPromise
+}
+
 export interface MapTrip {
   recordId: string
   data: Trip
@@ -87,12 +101,27 @@ export function TripMap({
       zoomControl: true,
       attributionControl: true,
     })
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      subdomains: 'abcd',
-      maxZoom: 12,
-    }).addTo(m)
+    m.setMaxZoom(8)
+    m.attributionControl.setPrefix('')
+    m.attributionControl.addAttribution('Boundaries © <a href="https://www.naturalearthdata.com/">Natural Earth</a>')
+    // Basemap: Natural Earth land drawn from data bundled with the app, so
+    // the map never depends on (or needs an API key for) a tile service.
+    // Loaded lazily to keep it out of the first paint.
+    // Land gets its own pane under the routes (overlayPane is z 400), so it
+    // can arrive after the routes without covering them.
+    m.createPane('land').style.zIndex = '250'
+    const base = L.layerGroup().addTo(m)
+    void loadLand().then((land) => {
+      if (!map.current) return
+      for (const offset of [-360, 0, 360]) {
+        L.geoJSON(land, {
+          interactive: false,
+          pane: 'land',
+          coordsToLatLng: (c) => L.latLng(c[1], c[0] + offset),
+          style: { color: '#c9d3e1', weight: 0.7, fillColor: '#ffffff', fillOpacity: 1 },
+        }).addTo(base)
+      }
+    })
     layer.current = L.layerGroup().addTo(m)
     map.current = m
     // The container may size after mount (flex layouts).
@@ -117,9 +146,9 @@ export function TripMap({
       const selected = t.recordId === selectedId
       const path = greatCircle([d.originLat, d.originLng], [d.destinationLat, d.destinationLng])
       const line = L.polyline(path, {
-        color: selected ? '#f5b83d' : '#7aa7ff',
+        color: selected ? '#1d4ed8' : '#5b8def',
         weight: selected ? 3.5 : 2,
-        opacity: selected ? 1 : 0.65,
+        opacity: selected ? 1 : 0.7,
         dashArray: d.status === 'open' ? undefined : '4 6',
       })
       // Wide invisible hit target so thin routes are easy to click.
@@ -149,7 +178,7 @@ export function TripMap({
     }
     if (bounds.length && lastFit.current !== (fitKey ?? 'default')) {
       lastFit.current = fitKey ?? 'default'
-      m.fitBounds(L.latLngBounds(bounds), { padding: [40, 40], maxZoom: 6 })
+      m.fitBounds(L.latLngBounds(bounds), { padding: [60, 60], maxZoom: 5 })
     }
   }, [trips, selectedId, fitKey])
 
