@@ -53,7 +53,7 @@ const toRad = (d: number) => (d * Math.PI) / 180
 const toDeg = (r: number) => (r * 180) / Math.PI
 
 /** Points along the great circle between two coordinates (for curved routes). */
-function greatCircle(a: [number, number], b: [number, number], steps = 48): [number, number][] {
+function greatCircle(a: [number, number], b: [number, number], steps = 160): [number, number][] {
   const [lat1, lon1] = [toRad(a[0]), toRad(a[1])]
   const [lat2, lon2] = [toRad(b[0]), toRad(b[1])]
   const d =
@@ -84,6 +84,33 @@ function greatCircle(a: [number, number], b: [number, number], steps = 48): [num
     pts.push([toDeg(Math.atan2(z, Math.sqrt(x * x + y * y))), lng])
   }
   return pts
+}
+
+/**
+ * The drawn route: the great circle, bowed gently to one side so every
+ * route — even a short, nearly straight hop — reads as a smooth flight arc.
+ */
+function flightArc(a: [number, number], b: [number, number]): [number, number][] {
+  const pts = greatCircle(a, b)
+  const [lat0, lng0] = pts[0]
+  const [lat1, lng1] = pts[pts.length - 1]
+  const dLat = lat1 - lat0
+  const dLng = lng1 - lng0
+  const len = Math.hypot(dLat, dLng)
+  if (len === 0) return pts
+  // Unit normal pointing "up" (north-ish), so arcs bow the same way a
+  // departures map draws them.
+  let nLat = dLng / len
+  let nLng = -dLat / len
+  if (nLat < 0) {
+    nLat = -nLat
+    nLng = -nLng
+  }
+  const bow = Math.min(len * 0.12, 6)
+  return pts.map(([lat, lng], i) => {
+    const k = Math.sin((Math.PI * i) / (pts.length - 1)) * bow
+    return [lat + nLat * k, lng + nLng * k] as [number, number]
+  })
 }
 
 function escapeHtml(s: string) {
@@ -164,15 +191,22 @@ export function TripMap({
       const d = t.data
       if (d.originLat == null || d.originLng == null || d.destinationLat == null || d.destinationLng == null) continue
       const selected = t.recordId === selectedId
-      const path = greatCircle([d.originLat, d.originLng], [d.destinationLat, d.destinationLng])
+      const path = flightArc([d.originLat, d.originLng], [d.destinationLat, d.destinationLng])
+      // smoothFactor 0: no point dropping at any zoom, so curves stay smooth.
+      const smooth = { smoothFactor: 0, lineCap: 'round' as const, lineJoin: 'round' as const }
+      if (selected) {
+        // Soft white halo under the selected route lifts it off the map.
+        L.polyline(path, { ...smooth, color: '#ffffff', weight: 8, opacity: 0.9, interactive: false }).addTo(g)
+      }
       const line = L.polyline(path, {
-        color: selected ? '#1d4ed8' : '#5b8def',
-        weight: selected ? 3.5 : 2,
-        opacity: selected ? 1 : 0.7,
+        ...smooth,
+        color: selected ? '#1d4ed8' : '#4f7fe8',
+        weight: selected ? 3.2 : 2,
+        opacity: selected ? 1 : 0.75,
         dashArray: d.status === 'open' ? undefined : '4 6',
       })
       // Wide invisible hit target so thin routes are easy to click.
-      const hit = L.polyline(path, { color: '#000', opacity: 0, weight: 16 })
+      const hit = L.polyline(path, { ...smooth, color: '#000', opacity: 0, weight: 16 })
       const popup = `<div style="min-width:180px">
           <div style="font-weight:600;margin-bottom:2px">${escapeHtml(d.title)}</div>
           <div class="font-code" style="font-size:12px;opacity:.8">${escapeHtml(d.origin)} → ${escapeHtml(d.destination)}</div>

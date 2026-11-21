@@ -1,22 +1,55 @@
+import { useId } from 'react'
 import { cn } from '@/lib/utils'
 
-/** Charterline mark: a swept route arc with a departure point, in a blue tile. */
+/**
+ * Charterline mark: the "C" of Charterline drawn as a flight path — it
+ * departs from a dot at the lower right, sweeps around, and ends in a jet
+ * flying along the route. White on an aviation-blue tile.
+ */
 export function LogoMark({ className }: { className?: string }) {
+  const id = useId().replace(/:/g, '')
   return (
-    <svg viewBox="0 0 32 32" aria-hidden className={cn('h-7 w-7', className)}>
-      <rect width="32" height="32" rx="8" fill="#1d4ed8" />
-      <path d="M7 22 C 12 9, 20 8, 25 11" stroke="#fff" strokeWidth="2.4" fill="none" strokeLinecap="round" />
-      <circle cx="7" cy="22" r="2.6" fill="#fff" />
-      <path d="M25 11 l-4.2 -1.6 l1.3 2.4 l-1.9 2.1 z" fill="#fff" />
+    <svg viewBox="0 0 32 32" aria-hidden className={cn('h-7 w-7 shrink-0', className)}>
+      <defs>
+        <linearGradient id={`${id}-bg`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#3b7bff" />
+          <stop offset="1" stopColor="#1d4ed8" />
+        </linearGradient>
+        <linearGradient id={`${id}-route`} x1="1" y1="1" x2="0" y2="0">
+          <stop offset="0" stopColor="#fff" stopOpacity="0.9" />
+          <stop offset="0.5" stopColor="#fff" />
+        </linearGradient>
+      </defs>
+      <rect width="32" height="32" rx="8.5" fill={`url(#${id}-bg)`} />
+      {/* soft top highlight for depth */}
+      <rect x="0.5" y="0.5" width="31" height="31" rx="8" fill="none" stroke="#fff" strokeOpacity="0.12" />
+      {/* the route, shaped as a C */}
+      <path
+        d="M21.6 22.1 A8.6 8.6 0 1 1 19.6 8.2"
+        fill="none"
+        stroke={`url(#${id}-route)`}
+        strokeWidth="2.6"
+        strokeLinecap="round"
+      />
+      {/* departure point */}
+      <circle cx="21.6" cy="22.1" r="2.1" fill="#fff" />
+      {/* jet, flying along the route's tangent */}
+      <path
+        transform="translate(23.6 10.9) rotate(126) scale(0.68)"
+        fill="#fff"
+        d="M0 -6 C0.9 -6 1.2 -4.8 1.2 -3.6 L1.2 -1.2 L6 1.8 L6 3.1 L1.2 1.7 L1.2 4 L2.9 5.4 L2.9 6.4 L0 5.7 L-2.9 6.4 L-2.9 5.4 L-1.2 4 L-1.2 1.7 L-6 3.1 L-6 1.8 L-1.2 -1.2 L-1.2 -3.6 C-1.2 -4.8 -0.9 -6 0 -6 Z"
+      />
     </svg>
   )
 }
 
 export function Logo({ className }: { className?: string }) {
   return (
-    <span className={cn('flex items-center gap-2 text-[15px] font-semibold tracking-tight text-foreground', className)}>
+    <span className={cn('flex items-center gap-2.5 text-[15px] font-semibold tracking-tight text-foreground', className)}>
       <LogoMark />
-      Charterline
+      <span>
+        Charter<span className="text-primary">line</span>
+      </span>
     </span>
   )
 }
