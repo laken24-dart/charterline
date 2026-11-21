@@ -246,6 +246,16 @@ body { -webkit-font-smoothing: antialiased; font-feature-settings: "cv11", "ss01
 .leaflet-bar { border: 1px solid #e2e7ef !important; box-shadow: 0 2px 8px -2px rgba(15, 23, 42, 0.12) !important; border-radius: 8px !important; overflow: hidden; }
 .leaflet-bar a { background: #ffffff; color: #0b1220; border-color: #e2e7ef; }
 .leaflet-bar a:hover { background: #eef3fc; }
+/* Compact dark hover pill for routes and airports (replaces the default box). */
+.leaflet-tooltip.route-tip { background: #0b1220; color: #fff; border: 0; border-radius: 9999px; padding: 4px 10px; font-size: 12px; font-weight: 600; box-shadow: 0 6px 16px -6px rgba(11, 18, 32, 0.5); white-space: nowrap; }
+.leaflet-tooltip.route-tip::before { display: none; }
+.route-tip-sep { margin: 0 6px; opacity: 0.45; }
+/* No click focus rectangles on routes, markers or the map itself;
+   keyboard users still get a ring on the map via :focus-visible. */
+.leaflet-container .leaflet-interactive:focus,
+.leaflet-container .leaflet-marker-icon:focus,
+.leaflet-container.leaflet-container:focus { outline: none; }
+.leaflet-container.leaflet-container:focus-visible { outline: 2px solid #2563eb; outline-offset: -2px; }
 .airport-dot { width: 10px; height: 10px; border-radius: 9999px; background: #1d4ed8; border: 2px solid #ffffff; box-shadow: 0 0 0 1px rgba(29, 78, 216, 0.4), 0 1px 3px rgba(15, 23, 42, 0.3); }
 .airport-dot.dest { background: #0b1220; box-shadow: 0 0 0 1px rgba(11, 18, 32, 0.4), 0 1px 3px rgba(15, 23, 42, 0.3); }
 

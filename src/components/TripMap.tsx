@@ -227,24 +227,25 @@ export function TripMap({
       })
       // Wide invisible hit target so thin routes are easy to click.
       const hit = new SmoothPolyline(path, { ...smooth, color: '#000', opacity: 0, weight: 16 })
-      const popup = `<div style="min-width:180px">
-          <div style="font-weight:600;margin-bottom:2px">${escapeHtml(d.title)}</div>
-          <div class="font-code" style="font-size:12px;opacity:.8">${escapeHtml(d.origin)} → ${escapeHtml(d.destination)}</div>
-          <div style="font-size:12px;margin-top:4px">${escapeHtml(d.aircraft)} · ${usd(d.dayRate)}/day</div>
-        </div>`
+      // Compact hover label. The selected route gets none: it is already
+      // highlighted, and its details are open in the list.
+      const label = `<span class="font-code">${escapeHtml(d.origin)} → ${escapeHtml(d.destination)}</span><span class="route-tip-sep">·</span>${usd(d.dayRate)}/day`
       for (const l of [line, hit]) {
-        l.bindTooltip(popup, { sticky: true, direction: 'top', opacity: 1 })
-        l.on('click', () => onSelectRef.current?.(t.recordId))
+        if (!selected) l.bindTooltip(label, { sticky: true, direction: 'top', offset: [0, -8], className: 'route-tip', opacity: 1 })
+        l.on('click', () => {
+          l.closeTooltip()
+          onSelectRef.current?.(t.recordId)
+        })
         l.addTo(g)
       }
       const dot = (cls: string) => L.divIcon({ className: '', html: `<div class="airport-dot ${cls}"></div>`, iconSize: [10, 10] })
       const last = path[path.length - 1]
       L.marker([d.originLat, d.originLng], { icon: dot('') })
-        .bindTooltip(`<span class="font-code">${escapeHtml(d.origin)}</span>`, { direction: 'top' })
+        .bindTooltip(`<span class="font-code">${escapeHtml(d.origin)}</span>`, { direction: 'top', offset: [0, -6], className: 'route-tip' })
         .on('click', () => onSelectRef.current?.(t.recordId))
         .addTo(g)
       L.marker(last, { icon: dot('dest') })
-        .bindTooltip(`<span class="font-code">${escapeHtml(d.destination)}</span>`, { direction: 'top' })
+        .bindTooltip(`<span class="font-code">${escapeHtml(d.destination)}</span>`, { direction: 'top', offset: [0, -6], className: 'route-tip' })
         .on('click', () => onSelectRef.current?.(t.recordId))
         .addTo(g)
       if (selected) line.bringToFront()
