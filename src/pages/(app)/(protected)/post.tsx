@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { Sparkles } from 'lucide-react'
 import { Button, Input, Textarea, useToast } from '@/components/ui'
 import { Field, NativeSelect, Panel } from '../../../components/bits'
 import { TripMap } from '../../../components/TripMap'
@@ -17,6 +18,7 @@ export default function PostTrip() {
   const navigate = useNavigate()
   const toast = useToast()
   const [busy, setBusy] = useState(false)
+  const [drafting, setDrafting] = useState(false)
   const [f, setF] = useState({
     title: '',
     origin: '',
@@ -71,6 +73,16 @@ export default function PostTrip() {
   const days = tripDays(f.startDate, f.endDate)
   const valid =
     f.title.trim() && f.origin && f.destination && f.aircraft.trim() && f.typeRating && Number(f.dayRate) > 0 && f.endDate >= f.startDate
+
+  const canDraft = !!f.origin && !!f.destination
+  async function draft() {
+    if (f.notes.trim() && !confirm('Replace the current details with an AI draft? Your notes are used as input.')) return
+    setDrafting(true)
+    const res = await callAction<{ text: string }>('draftTripDetails', { ...f })
+    setDrafting(false)
+    if (!res.success || !res.data) return toast.error('Could not draft details', res.error ?? '')
+    set('notes', res.data.text)
+  }
 
   async function submit() {
     setBusy(true)
@@ -132,8 +144,16 @@ export default function PostTrip() {
             </Field>
           </div>
           <Field label="Details">
-            <Textarea rows={4} value={f.notes} onChange={(e) => set('notes', e.target.value)} placeholder="Legs, overnights, per diem, Part 91/135, recurrency requirements…" />
+            <Textarea rows={6} value={f.notes} onChange={(e) => set('notes', e.target.value)} placeholder="Legs, overnights, per diem, Part 91/135, recurrency requirements…" data-testid="trip-notes" />
           </Field>
+          <div className="-mt-2 flex flex-wrap items-center gap-3">
+            <Button size="sm" variant="outline" onClick={draft} loading={drafting} disabled={!canDraft || drafting} data-testid="draft-details">
+              <Sparkles /> {f.notes.trim() ? 'Polish with AI' : 'Draft with AI'}
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              {canDraft ? 'Writes the details from the fields above and any notes you jot down. Review before publishing.' : 'Pick a route to enable the AI draft.'}
+            </span>
+          </div>
         </Panel>
 
         <div className="space-y-4">

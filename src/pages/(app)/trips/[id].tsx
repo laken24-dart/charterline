@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { AuthOverlay, useMutations, useQuery } from 'deepspace'
-import { ArrowLeft, CalendarPlus, FileText, Trash2 } from 'lucide-react'
+import { ArrowLeft, CalendarPlus, CloudSun, FileText, Trash2, Wind } from 'lucide-react'
 import { Button, Textarea, useToast } from '@/components/ui'
 import { TripMap } from '../../../components/TripMap'
 import { Empty, Field, Panel, PanelHeader, Route, StatusPill } from '../../../components/bits'
@@ -14,7 +14,8 @@ import {
   useMyProfile,
   usd,
 } from '../../../lib/client'
-import { ratingCode } from '../../../lib/airports'
+import { findAirport, ratingCode } from '../../../lib/airports'
+import { compass, useWeather } from '../../../lib/integration-client'
 import type { Application, DocumentRow, Slot, Trip } from '../../../schemas/aviation-schemas'
 
 export default function TripPage() {
@@ -77,6 +78,7 @@ export default function TripPage() {
         </div>
 
         <div className="space-y-6">
+          <FieldWeather origin={d.origin} destination={d.destination} signedIn={!!me.isSignedIn} />
           {isOwner ? (
             <>
               <OwnerTripControls tripId={trip.recordId} status={d.status} />
@@ -97,6 +99,61 @@ function Stat({ label, value, sub }: { label: string; value: React.ReactNode; su
       <dt className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</dt>
       <dd className="mt-1 text-sm font-medium text-foreground">{value}</dd>
       {sub && <dd className="mt-0.5 text-xs text-muted-foreground">{sub}</dd>}
+    </div>
+  )
+}
+
+// ── Field weather (openweathermap integration) ─────────────────────────────
+
+function FieldWeather({ origin, destination, signedIn }: { origin: string; destination: string; signedIn: boolean }) {
+  return (
+    <Panel>
+      <PanelHeader title="Current field weather" />
+      {signedIn ? (
+        <div className="divide-y divide-border">
+          <AirportWeather icao={origin} />
+          {destination !== origin && <AirportWeather icao={destination} />}
+        </div>
+      ) : (
+        <p className="p-4 text-sm text-muted-foreground">Sign in to see live conditions at both airports.</p>
+      )}
+    </Panel>
+  )
+}
+
+function AirportWeather({ icao }: { icao: string }) {
+  const airport = findAirport(icao)
+  const { status, data } = useWeather(airport?.city, !!airport)
+  return (
+    <div className="flex items-center gap-3 px-4 py-3" data-testid="airport-weather">
+      <span className="font-code w-12 shrink-0 text-sm text-foreground">{icao}</span>
+      {status === 'ready' && data ? (
+        <>
+          {data.icon ? (
+            <img src={`https://openweathermap.org/img/wn/${data.icon}.png`} alt="" className="h-8 w-8 shrink-0" />
+          ) : (
+            <CloudSun className="h-5 w-5 shrink-0 text-muted-foreground" />
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium capitalize text-foreground">
+              <span className="tabular">{Math.round(data.temp)}°F</span> · {data.description}
+            </p>
+            <p className="flex flex-wrap gap-x-3 text-xs text-muted-foreground">
+              {typeof data.wind_speed === 'number' && (
+                <span className="inline-flex items-center gap-1">
+                  <Wind className="h-3 w-3" /> {compass(data.wind_deg)} {Math.round(data.wind_speed)} mph
+                </span>
+              )}
+              {typeof data.visibility === 'number' && <span>Vis {(data.visibility / 1609).toFixed(data.visibility >= 16090 ? 0 : 1)} mi</span>}
+              {typeof data.humidity === 'number' && <span>{data.humidity}% RH</span>}
+            </p>
+          </div>
+        </>
+      ) : (
+        <p className="flex-1 text-xs text-muted-foreground">
+          {status === 'error' ? 'Weather unavailable for this field.' : 'Loading conditions…'}
+        </p>
+      )}
     </div>
   )
 }

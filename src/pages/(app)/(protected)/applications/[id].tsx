@@ -8,13 +8,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery } from 'deepspace'
-import { ArrowLeft, CalendarCheck, Eye, FileText, Send } from 'lucide-react'
+import { ArrowLeft, CalendarCheck, CalendarPlus, Eye, FileText, Send } from 'lucide-react'
 import { Button, useToast } from '@/components/ui'
 import { cn } from '@/lib/utils'
 import { Empty, Panel, PanelHeader, Route, StatusPill } from '../../../../components/bits'
 import { callAction, formatDate, formatDateTime, openDocument, timeAgo, useMyProfile } from '../../../../lib/client'
 import { ratingCode } from '../../../../lib/airports'
-import type { AppMessage, Application, DocumentRow, Profile, Slot } from '../../../../schemas/aviation-schemas'
+import { addToGoogleCalendar, exclusiveEndDate, type CalendarEventInput } from '../../../../lib/integration-client'
+import type { AppMessage, Application, DocumentRow, Profile, Slot, Trip } from '../../../../schemas/aviation-schemas'
 
 export default function ApplicationPage() {
   const { id = '' } = useParams()
@@ -63,6 +64,7 @@ export default function ApplicationPage() {
       <div className="grid min-h-0 flex-1 gap-6 lg:grid-cols-[1fr_340px]">
         <Thread applicationId={app.recordId} myId={userId ?? ''} note={app.data.note} pilotName={app.data.pilotName} />
         <div className="space-y-6">
+          {app.data.status === 'hired' && <HiredTrip app={app} isOperator={isOperator} />}
           <Interview app={app} isOperator={isOperator} />
           <Documents ids={app.data.documentIds ?? []} isOperator={isOperator} />
           {isOperator && <PilotCard pilotId={app.data.pilotId} />}
@@ -198,10 +200,28 @@ function Interview({ app, isOperator }: { app: { recordId: string; data: Applica
       <PanelHeader title="Interview" />
       <div className="space-y-3 p-4">
         {app.data.interviewAt ? (
-          <div className="flex items-center gap-2 rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-sm">
-            <CalendarCheck className="h-4 w-4 text-primary" />
-            <span className="tabular">{formatDateTime(app.data.interviewAt)}</span>
-          </div>
+          <>
+            <div className="flex items-center gap-2 rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-sm">
+              <CalendarCheck className="h-4 w-4 text-primary" />
+              <span className="tabular">{formatDateTime(app.data.interviewAt)}</span>
+            </div>
+            <CalendarButton
+              label="Add interview to Google Calendar"
+              testId="calendar-interview"
+              event={() => {
+                const slot = records.find((s) => s.recordId === app.data.interviewSlotId)
+                const start = new Date(app.data.interviewAt!)
+                const end = new Date(start.getTime() + (slot?.data.durationMin ?? 30) * 60_000)
+                const other = isOperator ? app.data.pilotName : app.data.company
+                return {
+                  title: `Charterline interview · ${app.data.tripTitle}${other ? ` · ${other}` : ''}`,
+                  start: start.toISOString(),
+                  end: end.toISOString(),
+                  description: `Interview for ${app.data.tripTitle} (${app.data.route}).\nConversation: ${window.location.origin}/applications/${app.recordId}`,
+                }
+              }}
+            />
+          </>
         ) : (
           <p className="text-sm text-muted-foreground">No interview booked yet.</p>
         )}
@@ -232,6 +252,66 @@ function Interview({ app, isOperator }: { app: { recordId: string; data: Applica
               ))}
             </ul>
           </div>
+        )}
+      </div>
+    </Panel>
+  )
+}
+
+/** Put an event on the signed-in user's own Google Calendar (google integration). */
+function CalendarButton({ label, event, testId }: { label: string; event: () => CalendarEventInput; testId: string }) {
+  const toast = useToast()
+  const [busy, setBusy] = useState(false)
+  const [added, setAdded] = useState(false)
+  async function add() {
+    setBusy(true)
+    const res = await addToGoogleCalendar(event())
+    setBusy(false)
+    if (res.ok) {
+      setAdded(true)
+      toast.success('Added to Google Calendar')
+      if (res.link) window.open(res.link, '_blank', 'noopener')
+    } else if (res.needsConnect) {
+      toast.info('Connect Google Calendar', 'Approve access in the popup, then click the button again.')
+    } else {
+      toast.error('Could not add to calendar', res.error)
+    }
+  }
+  return (
+    <Button size="sm" variant="outline" className="w-full" onClick={add} loading={busy} disabled={added} data-testid={testId}>
+      <CalendarPlus /> {added ? 'Added to Google Calendar' : label}
+    </Button>
+  )
+}
+
+function HiredTrip({ app, isOperator }: { app: { recordId: string; data: Application }; isOperator: boolean }) {
+  const { records } = useQuery<Trip>('trips', { limit: 500 })
+  const trip = records.find((r) => r.recordId === app.data.tripId)?.data
+  return (
+    <Panel>
+      <PanelHeader title={isOperator ? 'Crew hired' : "You're hired"} />
+      <div className="space-y-3 p-4 text-sm">
+        <p className="text-muted-foreground">
+          {trip?.startDate ? `${formatDate(trip.startDate)} – ${formatDate(trip.endDate ?? trip.startDate)} · ${trip.aircraft}` : 'Trip details loading…'}
+        </p>
+        {trip?.startDate && (
+          <CalendarButton
+            label="Add trip to Google Calendar"
+            testId="calendar-trip"
+            event={() => ({
+              title: `${trip.title} · ${trip.origin} → ${trip.destination}`,
+              start: trip.startDate!,
+              end: exclusiveEndDate(trip.endDate ?? trip.startDate!),
+              allDay: true,
+              location: trip.originName ? `${trip.origin} · ${trip.originName}` : trip.origin,
+              description: [
+                `${trip.company ?? ''} contract trip on Charterline`.trim(),
+                `Aircraft: ${trip.aircraft} · ${trip.seat ?? 'Either'} seat`,
+                `Crew: ${app.data.pilotName ?? ''}`,
+                `Conversation: ${window.location.origin}/applications/${app.recordId}`,
+              ].join('\n'),
+            })}
+          />
         )}
       </div>
     </Panel>

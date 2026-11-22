@@ -17,6 +17,8 @@ import type {
 } from '../schemas/aviation-schemas'
 import { SEATS } from '../schemas/aviation-schemas'
 import { findAirport } from '../lib/airports'
+import { notifyUser } from '../server/notify'
+import { draftTripDetails } from '../server/ai-draft'
 
 interface Envelope<T> {
   recordId: string
@@ -110,7 +112,7 @@ const createTrip: ActionHandler<Env> = async ({ userId, params, tools }) => {
 
 // ── Applications ───────────────────────────────────────────────────────────
 
-const applyToTrip: ActionHandler<Env> = async ({ userId, params, tools }) => {
+const applyToTrip: ActionHandler<Env> = async ({ userId, params, tools, env }) => {
   const profile = await getProfile(tools, userId)
   if (profile?.accountType !== 'crew') return fail('Only crew accounts can apply to trips.')
 
@@ -168,13 +170,50 @@ const applyToTrip: ActionHandler<Env> = async ({ userId, params, tools }) => {
       app,
       `${profile.displayName} applied with ${docs.length} document${docs.length === 1 ? '' : 's'}.`,
     )
+    await notifyUser(tools, env, operatorId, {
+      subject: `New applicant for ${trip.data.title}`,
+      lines: [
+        `${profile.displayName} applied to ${trip.data.title} (${trip.data.origin} → ${trip.data.destination}).`,
+        [
+          profile.certificate && `${profile.certificate} certificate`,
+          profile.totalHours && `${profile.totalHours.toLocaleString('en-US')} hrs total time`,
+          `${docs.length} document${docs.length === 1 ? '' : 's'} attached`,
+        ]
+          .filter(Boolean)
+          .join(' · '),
+      ],
+      cta: { label: 'Review application', path: `/applications/${app.recordId}` },
+    })
   }
   return created
 }
 
 const OPERATOR_STATUSES: ApplicationStatus[] = ['submitted', 'shortlisted', 'interview', 'hired', 'declined']
 
-const setApplicationStatus: ActionHandler<Env> = async ({ userId, params, tools }) => {
+const STATUS_EMAILS: Partial<Record<ApplicationStatus, (a: Application) => { subject: string; line: string }>> = {
+  shortlisted: (a) => ({
+    subject: `You're shortlisted: ${a.tripTitle}`,
+    line: `${a.company || 'The operator'} shortlisted your application for ${a.tripTitle} (${a.route}).`,
+  }),
+  interview: (a) => ({
+    subject: `Interview invitation: ${a.tripTitle}`,
+    line: `${a.company || 'The operator'} invited you to interview for ${a.tripTitle}. Pick a time from their open slots.`,
+  }),
+  hired: (a) => ({
+    subject: `You're hired: ${a.tripTitle}`,
+    line: `Congratulations! ${a.company || 'The operator'} hired you for ${a.tripTitle} (${a.route}). You can add the trip to your calendar from the conversation.`,
+  }),
+  declined: (a) => ({
+    subject: `Update on ${a.tripTitle}`,
+    line: `${a.company || 'The operator'} has decided not to move forward with your application for ${a.tripTitle}. There are more trips on the board.`,
+  }),
+  withdrawn: (a) => ({
+    subject: `${a.pilotName || 'An applicant'} withdrew from ${a.tripTitle}`,
+    line: `${a.pilotName || 'An applicant'} withdrew their application for ${a.tripTitle}.`,
+  }),
+}
+
+const setApplicationStatus: ActionHandler<Env> = async ({ userId, params, tools, env }) => {
   const app = await getRecord<Application>(tools, 'applications', params.applicationId)
   if (!app) return fail('Application not found.')
   const status = str(params.status) as ApplicationStatus
@@ -207,6 +246,18 @@ const setApplicationStatus: ActionHandler<Env> = async ({ userId, params, tools 
   }
   const who = userId === app.data.operatorId ? app.data.company || 'The operator' : app.data.pilotName || 'The applicant'
   await postSystemMessage(tools, app, `${who} ${labels[status]}.`)
+
+  const email = STATUS_EMAILS[status]?.(app.data)
+  if (email) {
+    // Tell the other participant: the pilot about operator decisions, the
+    // operator about a withdrawal.
+    const recipient = status === 'withdrawn' ? app.data.operatorId : app.data.pilotId
+    await notifyUser(tools, env, recipient, {
+      subject: email.subject,
+      lines: [email.line],
+      cta: { label: 'Open conversation', path: `/applications/${app.recordId}` },
+    })
+  }
   return res
 }
 
@@ -272,7 +323,7 @@ async function releaseBooking(tools: ActionTools, app: Envelope<Application>) {
   await tools.update('applications', app.recordId, { interviewSlotId: '', interviewAt: '' })
 }
 
-const bookSlot: ActionHandler<Env> = async ({ userId, params, tools }) => {
+const bookSlot: ActionHandler<Env> = async ({ userId, params, tools, env }) => {
   const app = await getRecord<Application>(tools, 'applications', params.applicationId)
   if (!app) return fail('Application not found.')
   if (app.data.pilotId !== userId) return fail('Only the applicant can book an interview.')
@@ -306,10 +357,19 @@ const bookSlot: ActionHandler<Env> = async ({ userId, params, tools }) => {
   })
   const when = new Date(slot.data.startsAt).toUTCString().replace(':00 GMT', ' UTC')
   await postSystemMessage(tools, app, `Interview booked for ${when} (${slot.data.durationMin ?? 30} min).`)
+  await notifyUser(tools, env, app.data.operatorId, {
+    subject: `Interview booked: ${app.data.pilotName} · ${app.data.tripTitle}`,
+    lines: [
+      `${app.data.pilotName || 'An applicant'} booked an interview for ${app.data.tripTitle}.`,
+      `When: ${when} (${slot.data.durationMin ?? 30} min).`,
+    ],
+    cta: { label: 'Open conversation', path: `/applications/${app.recordId}` },
+  })
   return { success: true, data: { recordId: slot.recordId } }
 }
 
 export const actions: Record<string, ActionHandler<Env>> = {
+  draftTripDetails,
   createTrip,
   applyToTrip,
   setApplicationStatus,

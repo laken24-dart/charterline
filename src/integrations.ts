@@ -24,7 +24,15 @@ export const integrations: Record<
   string,
   { billing: 'developer' | 'user'; anonymous?: boolean }
 > = {
+  // Per-user OAuth: each pilot/operator connects their own Google Calendar
+  // ("Add to Google Calendar" on applications/[id]).
   google: { billing: 'user' },
   composio: { billing: 'user' },
-  // openai: { billing: 'developer', anonymous: true },
+  // Owner-paid, signed-in callers only:
+  // hiring-flow notifications (src/server/notify.ts)
+  email: { billing: 'developer' },
+  // "Draft with AI" on the post-a-trip form (src/server/ai-draft.ts)
+  anthropic: { billing: 'developer' },
+  // Field weather on trip pages (src/lib/integration-client.ts)
+  openweathermap: { billing: 'developer' },
 }
