@@ -3,7 +3,7 @@
 import { defineConfig } from '@playwright/test'
 export default defineConfig({
   testDir: '.',
-  testMatch: ['seed-sample-trips.spec.ts'],
+  testMatch: ['seed-sample-trips.spec.ts', 'setup-demo-accounts.spec.ts'],
   timeout: 600_000,
   reporter: 'line',
   use: { baseURL: process.env.SEED_URL ?? 'https://charterline.app.space' },

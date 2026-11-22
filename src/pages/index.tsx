@@ -210,6 +210,46 @@ export default function Landing() {
             </div>
           </section>
 
+          {/* Reviewer walkthrough */}
+          <section id="try" className="border-t border-border bg-white py-24" data-testid="try-it">
+            <div className="mx-auto max-w-6xl px-6">
+              <p className="font-code text-xs uppercase tracking-[0.2em] text-primary">Try the full flow</p>
+              <h2 className="mt-2 max-w-2xl text-3xl font-semibold tracking-tight text-[#0b1220] sm:text-4xl">Two demo accounts, five minutes.</h2>
+              <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                Sign in with the email and password option, using one account per browser window (a normal and a private
+                window works). The demo passwords are included with the project submission. Or sign in with your own
+                Google account for one side to receive the real notification emails.
+              </p>
+              <div className="mt-8 grid gap-4 md:grid-cols-2">
+                {[
+                  ['Operator', 'demo-operator@deepspace.test', 'Owns the "Reviewer demo — Teterboro to Aspen" trip, with interview slots already published.'],
+                  ['Pilot', 'demo-pilot@deepspace.test', 'ATP, 6,200 hrs, G450 rated, with two sample certificates already uploaded.'],
+                ].map(([who, email, body]) => (
+                  <div key={who} className="rounded-2xl border border-border p-6">
+                    <p className="text-sm font-semibold text-[#0b1220]">{who}</p>
+                    <p className="font-code mt-1 break-all text-sm text-primary">{email}</p>
+                    <p className="mt-2 text-sm text-muted-foreground">{body}</p>
+                  </div>
+                ))}
+              </div>
+              <ol className="mt-8 grid gap-x-8 gap-y-4 text-sm text-muted-foreground md:grid-cols-2">
+                {[
+                  ['Post a trip', 'As the operator, open Post a trip, pick a route, and press Draft with AI (Anthropic) to write the details.'],
+                  ['Check the weather', 'Open any trip: live conditions at both airports come from OpenWeatherMap.'],
+                  ['Apply', 'As the pilot, open the demo Aspen trip, attach a certificate and apply. The operator is emailed.'],
+                  ['Book an interview', 'From the conversation, pick a slot, then Add interview to Google Calendar.'],
+                  ['Hire', 'As the operator, press Hire. The pilot is emailed and can add the trip to Google Calendar.'],
+                  ['Privacy check', 'Sign in as anyone else: the application and its certificates are not visible to them.'],
+                ].map(([title, body], i) => (
+                  <li key={title} className="flex gap-4">
+                    <span className="font-code flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#0b1220] text-xs text-white">{i + 1}</span>
+                    <span className="pt-0.5 leading-relaxed"><span className="font-medium text-[#0b1220]">{title}.</span> {body}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </section>
+
           {/* CTA */}
           <section className="py-24">
             <div className="mx-auto max-w-6xl px-6">
